@@ -50,12 +50,17 @@ Ruby convention could reach it at runtime. Each finding says which convention:
 Each finding lists the test blocks that go away with it, indented under the finding:
 
 ```
-    app/models/post.rb:8   Post#unused_method  - never called; referenced in tests
-        spec/models/post_spec.rb:7-11
-        spec/models/post_spec.rb:24 (example calls it)
-    app/services/dead_service.rb:1   DeadService  - never referenced (2 method(s))
-        spec/services/dead_service_spec.rb:1-5 (entire file)
+  ● DeadService
+    app/services/dead_service.rb:1
+    never referenced (2 method(s))
+    referenced in tests
+    Remove with it:
+      spec/models/post_spec.rb:5  example calls it
+      spec/services/dead_service_spec.rb:1-5  entire file
 ```
+
+The report wraps to the terminal width, which can be overridden with `--width N`. It is colored when stdout is a TTY,
+unless `NO_COLOR` is set or `--no-color` is passed.
 
 `--csv out.csv` also writes `out_tests.csv`, with one row per block: test file, lines, match, entire file, and the
 finding it belongs to.

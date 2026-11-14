@@ -18,7 +18,7 @@ end
 require "optparse"
 require_relative "lib/dead_code"
 
-options = { color: $stdout.tty?, routes: :static, only: nil, paths: [], ignore: [] }
+options = { color: $stdout.tty? && !ENV.key?("NO_COLOR"), routes: :static, only: nil, paths: [], ignore: [] }
 parser = OptionParser.new do |o|
   o.banner = "Usage: #{$PROGRAM_NAME} [options] [RAILS_ROOT (default: .)]"
   o.on("--csv PATH", "Also write findings to PATH and removable tests to PATH_tests.csv") { |v| options[:csv] = v }
@@ -39,7 +39,12 @@ parser = OptionParser.new do |o|
     options[:paths] << v
   end
   o.on("--quiet", "No terminal report (use with --csv)") { options[:quiet] = true }
-  o.on("--[no-]color", "Colorize output (default: when stdout is a TTY)") { |v| options[:color] = v }
+  o.on("--[no-]color", "Colorize output (default: when stdout is a TTY and NO_COLOR is unset)") do |v|
+    options[:color] = v
+  end
+  o.on("--width COLUMNS", Integer, "Wrap the report at this width (default: terminal width)") do |v|
+    options[:width] = v
+  end
   o.on("--verbose", "Print parse and route warnings") { options[:verbose] = true }
 end
 parser.parse!
@@ -85,7 +90,9 @@ findings = findings.select { |f| options[:paths].any? { |p| f.location.path.star
 
 report = DeadCode::Report.new(findings, index:, routes:, root:,
                                         elapsed: Process.clock_gettime(Process::CLOCK_MONOTONIC) - started)
-report.print_terminal($stdout, color: options[:color], verbose: options[:verbose]) unless options[:quiet]
+unless options[:quiet]
+  report.print_terminal($stdout, color: options[:color], verbose: options[:verbose], width: options[:width])
+end
 if options[:csv]
   tests_path = report.write_csv(options[:csv])
   test_rows = findings.sum { |f| f.tests.size }
