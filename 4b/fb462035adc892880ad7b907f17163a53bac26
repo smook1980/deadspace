@@ -1,0 +1,19 @@
+.github/workflows/ci.yml
+  s_15aa2573172643::t_0c559cf5bc003d 1-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4bfb462035adc892880ad7b907f17163a53bac26",
+  "prompts": {},
+  "sessions": {
+    "s_15aa2573172643": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e658e264-395a-4a04-a8d0-75c6a1683760",
+        "model": "unknown"
+      },
+      "human_author": "Shane Mook <shane.mook@gmail.com>"
+    }
+  }
+}
