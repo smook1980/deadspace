@@ -9,7 +9,14 @@ BUNDLE_GEMFILE=script/dead_code/Gemfile bundle install   # once; own bundle, the
 script/dead_code/analyze                                  # terminal report for the app in the current directory
 script/dead_code/analyze --csv tmp/dead_code.csv          # also write a CSV
 script/dead_code/analyze --path app/models --only unused  # narrow what is reported (analysis stays app-wide)
+script/dead_code/analyze --ignore script/one_offs --ignore 'lib/tasks/**/backfill_*.rake'
 ```
+
+`--ignore` (repeatable) takes a file, a directory, or a glob relative to the app root. Ignored files are left out
+completely: their classes and methods aren't reported, and their calls don't keep other code alive. Ignoring one-off
+scripts therefore surfaces code that only those scripts used. `db/migrate`, `vendor` and the other `exclude_globs`
+in `lib/dead_code/config.rb` are always skipped. Put permanent ignores under `extra_exclude_globs` in
+`.dead_code.yml`.
 
 ## How it decides
 

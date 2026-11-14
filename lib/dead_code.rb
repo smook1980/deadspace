@@ -45,8 +45,8 @@ module DeadCode
     (variants.map { |n| normalize(n) } + RAILS_NAMESPACES.map { |n| normalize(n) }).to_set
   end
 
-  def analyze(root, config:, routes:, exclude_paths: [])
-    index = Collector.new(root, config, exclude_paths:).collect
+  def analyze(root, config:, routes:, ignore: [])
+    index = Collector.new(root, config, ignore:).collect
     analyzer = Analyzer.new(index, routes, config, gem_namespaces: gem_namespaces(root))
     [analyzer.run, index]
   end

@@ -18,7 +18,7 @@ end
 require "optparse"
 require_relative "lib/dead_code"
 
-options = { color: $stdout.tty?, routes: :static, only: nil, paths: [] }
+options = { color: $stdout.tty?, routes: :static, only: nil, paths: [], ignore: [] }
 parser = OptionParser.new do |o|
   o.banner = "Usage: #{$PROGRAM_NAME} [options] [RAILS_ROOT (default: .)]"
   o.on("--csv PATH", "Also write findings to PATH and removable tests to PATH_tests.csv") { |v| options[:csv] = v }
@@ -29,6 +29,10 @@ parser = OptionParser.new do |o|
   end
   o.on("--no-routes", "Skip route analysis (every public controller method counts as an action)") do
     options[:routes] = nil
+  end
+  o.on("--ignore PATH", "Skip a file, directory or glob when collecting source files (repeatable),",
+       "e.g. --ignore script/one_offs --ignore 'lib/tasks/**/backfill_*.rake'") do |v|
+    options[:ignore] << v
   end
   o.on("--only LEVEL", %w[unused likely], "Only report 'unused' or 'likely' findings") { |v| options[:only] = v }
   o.on("--path PREFIX", "Only report findings under this path (repeatable); analysis is still app-wide") do |v|
@@ -46,24 +50,31 @@ end
 
 started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 config = DeadCode::Config.load(root, options[:config])
+
+# Don't analyze this tool when it lives inside the app it is analyzing.
+tool_dir = File.expand_path(__dir__)
+ignore = options[:ignore].dup
+ignore << tool_dir.delete_prefix("#{root}/") if tool_dir.start_with?("#{root}/")
+options[:ignore].each do |path|
+  next if path.match?(DeadCode::Collector::GLOB_CHARS) || File.exist?(File.join(root, path))
+
+  warn "--ignore #{path}: no such file or directory under #{root}"
+end
+
 routes =
   case options[:routes]
   when nil then nil
   when :static
-    files = DeadCode::Collector.new(root, config).files("routes_globs")
+    files = DeadCode::Collector.new(root, config, ignore:).files("routes_globs")
     if files.empty?
-      (warn "No routes files found; skipping route analysis")
+      warn "No routes files found; skipping route analysis"
     else
-      DeadCode::RouteParser.new(root,
-                                files).parse
+      DeadCode::RouteParser.new(root, files).parse
     end
   else DeadCode::RouteTable.from_json(options[:routes])
   end
 
-# Don't analyze this tool when it lives inside the app it is analyzing.
-tool_dir = File.expand_path(__dir__)
-exclude = tool_dir.start_with?("#{root}/") ? ["#{tool_dir.delete_prefix("#{root}/")}/"] : []
-findings, index = DeadCode.analyze(root, config:, routes:, exclude_paths: exclude)
+findings, index = DeadCode.analyze(root, config:, routes:, ignore:)
 
 if options[:only]
   findings = findings.select do |f|

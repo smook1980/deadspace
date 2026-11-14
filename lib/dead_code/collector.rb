@@ -7,10 +7,25 @@ module DeadCode
     CONSTANT_TOKEN_RE = /\b[A-Z][a-z]\w*(?:::[A-Z]\w*)*/
     SNAKE_CASE_RE = /\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b/
 
-    def initialize(root, config, exclude_paths: [])
+    GLOB_CHARS = /[*?\[{]/
+
+    # ignore: paths relative to the app root that are skipped entirely (neither definitions nor
+    # references). A directory or file path ("db/migrate", "script/one_offs/x.rb") or a glob
+    # ("script/**/bsd_*.rb").
+    def initialize(root, config, ignore: [])
       @root = root
       @config = config
-      @exclude_paths = exclude_paths
+      @ignore = ignore.map { |p| p.to_s.delete_prefix("./").delete_suffix("/") }.reject(&:empty?)
+    end
+
+    def ignored?(rel)
+      @ignore.any? do |pattern|
+        if pattern.match?(GLOB_CHARS)
+          File.fnmatch?(pattern, rel, File::FNM_PATHNAME | File::FNM_EXTGLOB)
+        else
+          rel == pattern || rel.start_with?("#{pattern}/")
+        end
+      end
     end
 
     def collect
@@ -65,7 +80,7 @@ module DeadCode
       excludes = @config["exclude_globs"]
       @config[key].flat_map { |g| Dir.glob(g, base: @root) }.uniq.sort.reject do |rel|
         excludes.any? { |e| File.fnmatch?(e, rel, File::FNM_EXTGLOB) } ||
-          @exclude_paths.any? { |p| rel.start_with?(p) } ||
+          ignored?(rel) ||
           !File.file?(File.join(@root, rel))
       end
     end
