@@ -147,6 +147,25 @@ module DeadCode
     def visit_constant_path_write_node(node) = node.value.accept(self)
     def visit_constant_path_or_write_node(node) = node.value.accept(self)
 
+    # `Contact = Struct.new(:id) do ... end` / `Error = Class.new(StandardError)` define a class.
+    def visit_constant_write_node(node)
+      call = node.value
+      kind = anonymous_namespace_kind(call)
+      return node.value.accept(self) unless kind
+
+      fqn = @nesting.empty? ? node.name.to_s : "#{@nesting.last}::#{node.name}"
+      if source?
+        ns = @index.namespace!(fqn, kind, Location.new(@path, node.location.start_line))
+        base = call.receiver.name == :Class && call.arguments&.arguments&.first
+        path = base && constant_path_string(base)
+        ns.superclass_ref ||= [path, @nesting_snapshot] if path
+      end
+      push_scope("C:#{fqn}") do
+        call.arguments&.accept(self)
+        with_frame(singleton: false, nesting: fqn) { call.block&.body&.accept(self) }
+      end
+    end
+
     private
 
     def refs
@@ -183,6 +202,15 @@ module DeadCode
     end
 
     def current_owner = @nesting.last || MAIN
+
+    ANONYMOUS_NAMESPACES = { %i[Struct new] => :class, %i[Class new] => :class, %i[Data define] => :class,
+                             %i[Module new] => :module }.freeze
+
+    def anonymous_namespace_kind(call)
+      return unless call.is_a?(Prism::CallNode) && call.receiver.is_a?(Prism::ConstantReadNode)
+
+      ANONYMOUS_NAMESPACES[[call.receiver.name, call.name]]
+    end
 
     def enter_namespace(node, kind)
       fqn = definition_fqn(node.constant_path)

@@ -38,6 +38,33 @@ Ruby convention could reach it at runtime. Each finding says which convention:
 | model attribute writer | `foo=` mass-assigned from request params |
 | unrouted public controller method used as a filter | `before_action :foo` on a public method (make it private) |
 
+## Removable tests
+
+Each finding lists the test blocks that go away with it, indented under the finding:
+
+```
+    app/models/post.rb:8   Post#unused_method  - never called; referenced in tests
+        spec/models/post_spec.rb:7-11
+        spec/models/post_spec.rb:24 (example calls it)
+    app/services/dead_service.rb:1   DeadService  - never referenced (2 method(s))
+        spec/services/dead_service_spec.rb:1-5 (entire file)
+```
+
+`--csv out.csv` also writes `out_tests.csv`, with one row per block: test file, lines, match, entire file, and the
+finding it belongs to.
+
+- **describes**: an RSpec group about the finding, such as `RSpec.describe DeadService` or `describe "#unused_method"`
+  inside `RSpec.describe Post`. Minitest `class DeadServiceTest` counts too. `#` matches instance methods, `.`/`::`
+  matches class methods.
+- **calls**: an example (`it`/`specify`/`test`) whose own body calls the method or references the constant. Methods
+  only match inside specs whose subject is the method's class or a subclass. A call that hits a spec-local helper
+  (`def x`, `let(:x)`, `subject(:x)`) doesn't match.
+- Nested blocks are merged into the outermost one. A file holding nothing but the block (and `require`s) is reported
+  as the whole file.
+- No tests are listed for a public controller method that is still used as a filter or helper.
+
+A "calls" example can also cover live code, so read it before deleting.
+
 ## Routes
 
 The default parser covers `namespace`, `scope`, `controller`, `resources`/`resource` (only/except/controller/module/

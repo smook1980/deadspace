@@ -63,13 +63,14 @@ module DeadCode
   end
 
   class Index
-    attr_reader :namespaces, :methods, :scopes, :test_refs, :stats, :warnings, :visibility_overrides
+    attr_reader :namespaces, :methods, :scopes, :test_refs, :test_blocks, :stats, :warnings, :visibility_overrides
 
     def initialize
       @namespaces = {}
       @methods = {}
       @scopes = {}
       @test_refs = ScopeRefs.new
+      @test_blocks = [] # root TestBlocks of every test file
       @stats = Hash.new(0)
       @warnings = []
       @visibility_overrides = {}

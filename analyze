@@ -21,7 +21,7 @@ require_relative "lib/dead_code"
 options = { color: $stdout.tty?, routes: :static, only: nil, paths: [] }
 parser = OptionParser.new do |o|
   o.banner = "Usage: #{$PROGRAM_NAME} [options] [RAILS_ROOT (default: .)]"
-  o.on("--csv PATH", "Also write findings to a CSV file") { |v| options[:csv] = v }
+  o.on("--csv PATH", "Also write findings to PATH and removable tests to PATH_tests.csv") { |v| options[:csv] = v }
   o.on("--config PATH", "YAML overrides (default: RAILS_ROOT/.dead_code.yml if present)") { |v| options[:config] = v }
   o.on("--routes-json PATH",
        "Use routes dumped from the booted app (dump_routes.rb) instead of parsing routes.rb") do |v|
@@ -76,6 +76,7 @@ report = DeadCode::Report.new(findings, index:, routes:, root:,
                                         elapsed: Process.clock_gettime(Process::CLOCK_MONOTONIC) - started)
 report.print_terminal($stdout, color: options[:color], verbose: options[:verbose]) unless options[:quiet]
 if options[:csv]
-  report.write_csv(options[:csv])
-  warn "Wrote #{findings.size} findings to #{options[:csv]}"
+  tests_path = report.write_csv(options[:csv])
+  test_rows = findings.sum { |f| f.tests.size }
+  warn "Wrote #{findings.size} findings to #{options[:csv]} and #{test_rows} removable test blocks to #{tests_path}"
 end

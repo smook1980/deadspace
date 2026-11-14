@@ -75,11 +75,17 @@ module DeadCode
     def read(rel) = File.read(File.join(@root, rel), encoding: "UTF-8").scrub
 
     def parse_ruby(index, rel, mode, **opts)
-      result = Prism.parse(read(rel), filepath: rel)
+      source = read(rel)
+      result = Prism.parse(source, filepath: rel)
       if result.errors.any? && mode == :source
         index.warnings << "#{rel}: #{result.errors.size} parse error(s); analyzed the recoverable AST"
       end
       result.value.accept(RubyVisitor.new(index, rel, mode:, **opts))
+      return unless mode == :test
+
+      test_map = TestMapVisitor.new(rel, source.lines.size)
+      result.value.accept(test_map)
+      index.test_blocks.concat(test_map.roots)
     end
 
     # Templates are not parsed; every identifier is treated as a possible call/symbol and every

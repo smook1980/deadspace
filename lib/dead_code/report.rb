@@ -10,6 +10,7 @@ module DeadCode
                      "review by hand"
     }.freeze
     CSV_HEADERS = %w[confidence kind name file line reason referenced_in_tests definition_count].freeze
+    TEST_CSV_HEADERS = %w[test_file lines first_line last_line match entire_file confidence kind name file line].freeze
 
     def initialize(findings, index:, routes:, root:, elapsed:)
       @findings = findings
@@ -52,10 +53,13 @@ module DeadCode
             notes << "referenced in tests" if f.referenced_in_tests
             notes << "#{f.definition_count} definitions" if f.definition_count > 1
             io.puts "    #{dim(f.location.to_s.ljust(width))}  #{f.name}  #{dim("- #{notes.join("; ")}")}"
+            print_tests(io, f)
           end
           collapsed.each do |reason, fs|
             examples = fs.first(3).map(&:name).join(", ")
-            io.puts "    #{fs.size} more #{dim("- #{reason}")} (e.g. #{examples}; full list in --csv)"
+            with_tests = fs.count { |f| f.tests&.any? }
+            tests_note = with_tests.positive? ? "; #{with_tests} with removable tests" : ""
+            io.puts "    #{fs.size} more #{dim("- #{reason}")} (e.g. #{examples}#{tests_note}; full list in --csv)"
           end
         end
         io.puts
@@ -73,6 +77,7 @@ module DeadCode
       io.puts summary_line
     end
 
+    # Writes the findings to `path` and the removable tests to a sibling `*_tests.csv`. Returns that path.
     def write_csv(path)
       CSV.open(path, "w") do |csv|
         csv << CSV_HEADERS
@@ -81,14 +86,40 @@ module DeadCode
                   f.definition_count]
         end
       end
+
+      tests_path = self.class.tests_csv_path(path)
+      CSV.open(tests_path, "w") do |csv|
+        csv << TEST_CSV_HEADERS
+        @findings.each do |f|
+          (f.tests || []).each do |t|
+            csv << [t.path, t.lines, t.first_line, t.last_line, t.match, t.whole_file, f.confidence, f.kind, f.name,
+                    f.location.path, f.location.line]
+          end
+        end
+      end
+      tests_path
     end
+
+    def self.tests_csv_path(path) = path.sub(/(\.csv)?\z/i, "_tests.csv")
 
     def summary_line
       counts = @findings.group_by(&:confidence).transform_values(&:size)
-      "Summary: #{counts.fetch(:unused, 0)} unused, #{counts.fetch(:likely_unused, 0)} likely unused"
+      removable = @findings.select { |f| f.confidence == :unused }.sum { |f| f.tests&.size || 0 }
+      "Summary: #{counts.fetch(:unused, 0)} unused, #{counts.fetch(:likely_unused, 0)} likely unused; " \
+        "#{removable} test block(s) removable with the unused findings"
     end
 
     private
+
+    # Test blocks that go away with the finding, indented under it.
+    def print_tests(io, finding)
+      (finding.tests || []).each do |t|
+        notes = []
+        notes << "entire file" if t.whole_file
+        notes << "example calls it" if t.match == :calls
+        io.puts "        #{t}#{dim(" (#{notes.join(", ")})") if notes.any?}"
+      end
+    end
 
     def route_summary
       return "route analysis skipped" unless @routes

@@ -1,8 +1,16 @@
 # frozen_string_literal: true
 
 module DeadCode
+  # `targets` is what the finding covers (constant names, or the MethodDef); `tests` the removable test blocks.
   Finding = Struct.new(:confidence, :kind, :name, :location, :reason, :referenced_in_tests,
-                       :definition_count, keyword_init: true)
+                       :definition_count, :targets, :tests, keyword_init: true)
+
+  # Lines of a test file that only exist to test a finding. match is :describes (the group is about
+  # the finding: `describe "#foo"`, `RSpec.describe Foo`) or :calls (an example whose body calls it).
+  TestRemoval = Struct.new(:path, :first_line, :last_line, :match, :whole_file, keyword_init: true) do
+    def lines = first_line == last_line ? first_line.to_s : "#{first_line}-#{last_line}"
+    def to_s = "#{path}:#{lines}"
+  end
 
   # Reachability over scopes. Entry points (top-level code, routed controller actions, framework
   # hooks, boot-time files, library namespaces) are live; a scope's references make the classes and
@@ -36,6 +44,8 @@ module DeadCode
       @findings = classify.sort_by do |f|
         [f.confidence == :unused ? 0 : 1, KIND_ORDER.fetch(f.kind), f.location.path, f.location.line]
       end
+      attach_tests(@findings)
+      @findings
     end
 
     private
@@ -391,7 +401,8 @@ module DeadCode
         location: ns.locations.first,
         reason: reasons.empty? ? base : reasons.first(3).join("; "),
         referenced_in_tests: family.any? { |f| @test_consts.include?(f.split("::").last) },
-        definition_count: ns.locations.size
+        definition_count: ns.locations.size,
+        targets: family
       )
     end
 
@@ -499,8 +510,86 @@ module DeadCode
       doubts
     end
 
+    # ---------------------------------------------------------------- removable tests
+
+    def attach_tests(findings)
+      index_test_blocks
+      findings.each do |f|
+        target = f.targets
+        # A public controller method kept alive as a filter/helper is still in use: keep its tests.
+        f.tests = if target.is_a?(MethodDef)
+                    @live_methods.include?(target.key) ? [] : prune_nested(method_tests(target))
+                  else
+                    prune_nested(namespace_tests(target))
+                  end
+      end
+    end
+
+    def index_test_blocks
+      @block_subjects = {}
+      @groups_describing_const = Hash.new { |h, k| h[k] = [] }
+      @examples_referencing_const = Hash.new { |h, k| h[k] = [] }
+      @groups_describing_method = Hash.new { |h, k| h[k] = [] }
+      @examples_calling = Hash.new { |h, k| h[k] = [] }
+      resolved = Hash.new { |h, path| h[path] = resolve_prefix(path, []) }
+      # A described constant must resolve exactly; falling back to its namespace would make
+      # `RSpec.describe Billing::Unknown` look like a spec of `Billing`.
+      subject_of = Hash.new { |h, path| h[path] = resolve(path, []) }
+
+      walk = lambda do |block, inherited|
+        own = block.const_path ? subject_of[block.const_path] : []
+        subjects = own.any? ? own : inherited
+        @block_subjects[block] = subjects
+        if block.example?
+          block.consts.each { |c| resolved[c].each { |fqn| @examples_referencing_const[fqn] << block } }
+          block.names.each { |n| @examples_calling[n] << block }
+        else
+          own.each { |fqn| @groups_describing_const[fqn] << block }
+          @groups_describing_method[block.method_name] << block if block.method_name
+        end
+        block.children.each { |child| walk.call(child, subjects) }
+      end
+      @index.test_blocks.each { |root| walk.call(root, []) }
+    end
+
+    def namespace_tests(family)
+      family.flat_map do |fqn|
+        @groups_describing_const[fqn].map { |b| [b, :describes] } +
+          @examples_referencing_const[fqn].map { |b| [b, :calls] }
+      end
+    end
+
+    # Only blocks whose subject (`RSpec.describe Post`, inherited by nested groups) is the method's
+    # class or a subclass, so `describe "#publish"` in another class's spec isn't matched by name.
+    def method_tests(m)
+      return [] if m.owner == MAIN
+
+      owners = Set[m.owner].merge(descendants(m.owner))
+      about_owner = ->(b) { @block_subjects[b].any? { |fqn| owners.include?(fqn) } }
+      scope_matches = ->(b) { b.method_scope.nil? || (b.method_scope == :singleton) == m.singleton }
+
+      describing = @groups_describing_method[m.name].select { |b| about_owner.call(b) && scope_matches.call(b) }
+      calling = @examples_calling[m.name].select { |b| about_owner.call(b) && !b.helper?(m.name) }
+      describing.map { |b| [b, :describes] } + calling.map { |b| [b, :calls] }
+    end
+
+    # Drop blocks inside another selected block; a group outranks the examples it contains.
+    def prune_nested(candidates)
+      kept = []
+      candidates.uniq { |b, _| b }.sort_by { |b, _| [b.path, b.first_line, -b.last_line] }.each do |block, match|
+        next if kept.any? { |k, _| k.contains?(block) }
+
+        kept << [block, match]
+      end
+      kept.map do |block, match|
+        whole = block.whole_file # line count of the file when the block is all it holds
+        TestRemoval.new(path: block.path, first_line: whole ? 1 : block.first_line,
+                        last_line: whole || block.last_line, match:, whole_file: !!whole)
+      end
+    end
+
     def build_method_finding(m, kind, confidence, reason)
-      Finding.new(confidence:, kind:, name: m.label, location: m.locations.first, reason:,
+      Finding.new(confidence:, kind:, name: m.label, location: m.locations.first, reason:, targets: m,
                   referenced_in_tests: @test_names.include?(m.name), definition_count: m.locations.size)
     end
   end
