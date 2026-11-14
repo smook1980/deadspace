@@ -1,11 +1,22 @@
-# Standalone tool (own Gemfile, no Rails). Fixtures are a fake app with intentionally odd code.
-inherit_from: ../../.rubocop.yml
-
 AllCops:
+  TargetRubyVersion: 3.1
+  NewCops: enable
+  SuggestExtensions: false
   Exclude:
-    - "test/fixtures/**/*"
+    - "test/fixtures/**/*" # a fake app with intentionally odd code
+    - "vendor/**/*"
+    - "tmp/**/*"
 
-Rails:
+Layout/LineLength:
+  Max: 120
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: double_quotes
+
+Style/Documentation:
   Enabled: false
 
 # The AST visitor and liveness pass are inherently branchy; splitting them hurts readability.
@@ -14,3 +25,7 @@ Metrics:
 
 Naming/MethodParameterName:
   AllowedNames: [m, f, io]
+
+# handle_* methods in the visitor act and return whether they handled the call; `?` would misdescribe them.
+Naming/PredicateMethod:
+  Enabled: false

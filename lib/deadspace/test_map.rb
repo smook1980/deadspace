@@ -112,6 +112,7 @@ module Deadspace
     def current = @stack.last
 
     HELPER_MACROS = %i[let let! subject subject!].freeze
+    private_constant :HELPER_MACROS
 
     def record_helper(node)
       return unless node.receiver.nil? && HELPER_MACROS.include?(node.name)

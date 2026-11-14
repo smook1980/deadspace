@@ -11,6 +11,7 @@ require "prism"
 require "active_support"
 require "active_support/core_ext/string/inflections"
 
+require_relative "deadspace/version"
 require_relative "deadspace/model"
 require_relative "deadspace/config"
 require_relative "deadspace/ruby_visitor"
@@ -19,6 +20,7 @@ require_relative "deadspace/collector"
 require_relative "deadspace/routes"
 require_relative "deadspace/analyzer"
 require_relative "deadspace/report"
+require_relative "deadspace/cli"
 
 module Deadspace
   CORE_CONSTANTS = DEADSPACE_CORE_CONSTANTS.to_set.freeze

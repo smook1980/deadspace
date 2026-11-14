@@ -1,22 +1,56 @@
-# Dead code analyzer
+# deadspace
 
-Static report of code in a Rails 7 app that nothing outside of tests reaches: whole modules, classes, methods,
-and controller actions without a route. Nothing is booted or eager-loaded. Code is parsed with
-[Prism](https://github.com/ruby/prism) (Ruby's own parser) and routes are read by evaluating `config/routes.rb` statically.
+Static report of code in a Rails 7+ app that nothing outside of tests reaches: whole modules, classes, methods,
+and controller actions without a route, plus the tests you can delete with them. Nothing is booted or eager-loaded.
+Code is parsed with [Prism](https://github.com/ruby/prism) (Ruby's own parser) and routes are read by evaluating
+`config/routes.rb` statically. Requires Ruby 3.1+.
+
+## Install
+
+The gem is installed from GitHub; it is not published to rubygems.org.
+
+**In the app's Gemfile** (the usual way):
+
+```ruby
+group :development do
+  gem "deadspace", github: "smook1980/deadspace", tag: "v0.1.0", require: false
+end
+```
 
 ```bash
-BUNDLE_GEMFILE=script/dead_code/Gemfile bundle install   # once; own bundle, the app's Gemfile.lock is untouched
-script/dead_code/analyze                                  # terminal report for the app in the current directory
-script/dead_code/analyze --csv tmp/dead_code.csv          # also write a CSV
-script/dead_code/analyze --path app/models --only unused  # narrow what is reported (analysis stays app-wide)
-script/dead_code/analyze --ignore script/one_offs --ignore 'lib/tasks/**/backfill_*.rake'
+bundle install
+bundle exec deadspace
+```
+
+`require: false` keeps it out of the app's runtime. It depends only on `activesupport`, `csv` and `prism`, so it
+resolves against an existing Rails bundle.
+
+**Standalone**, without touching the app's Gemfile:
+
+```bash
+git clone https://github.com/smook1980/deadspace.git && cd deadspace
+bundle install && bundle exec rake install   # builds the gem and installs it into the current Ruby
+cd path/to/app && deadspace
+```
+
+Install it under the same Ruby the app uses (`.ruby-version`), or the `deadspace` executable won't be on the path there.
+
+## Usage
+
+```bash
+deadspace                                   # terminal report for the app in the current directory
+deadspace path/to/app                       # or another app
+deadspace --csv tmp/deadspace.csv           # also write a CSV
+deadspace --path app/models --only unused   # narrow what is reported (analysis stays app-wide)
+deadspace --ignore script/one_offs --ignore 'lib/tasks/**/backfill_*.rake'
+deadspace --help
 ```
 
 `--ignore` (repeatable) takes a file, a directory, or a glob relative to the app root. Ignored files are left out
 completely: their classes and methods aren't reported, and their calls don't keep other code alive. Ignoring one-off
 scripts therefore surfaces code that only those scripts used. `db/migrate`, `vendor` and the other `exclude_globs`
-in `lib/dead_code/config.rb` are always skipped. Put permanent ignores under `extra_exclude_globs` in
-`.dead_code.yml`.
+in `lib/deadspace/config.rb` are always skipped. Put permanent ignores under `extra_exclude_globs` in
+`.deadspace.yml`.
 
 ## How it decides
 
@@ -85,14 +119,15 @@ concerns/member/collection/nesting), verb helpers (`to:`, `controller:`/`action:
 exact:
 
 ```bash
-bin/rails runner script/dead_code/dump_routes.rb > tmp/routes.json
-script/dead_code/analyze --routes-json tmp/routes.json
+bin/rails runner 'File.write("tmp/routes.json", Rails.application.routes.routes.map { |r|
+  r.defaults.slice(:controller, :action).merge(path: r.path.spec.to_s) }.to_json)'
+deadspace --routes-json tmp/routes.json
 ```
 
 ## Tuning
 
-Put overrides in `.dead_code.yml` at the app root, or pass `--config path`. Keys are listed in
-`lib/dead_code/config.rb`. A plain key replaces the default list. An `extra_` key appends to it:
+Put overrides in `.deadspace.yml` at the app root, or pass `--config path`. Keys are listed in
+`lib/deadspace/config.rb`. A plain key replaces the default list. An `extra_` key appends to it:
 
 ```yaml
 extra_ignore_methods: [liquid_method_missing, "/\\Awebhook_/"]   # exact names or /regex/
@@ -108,8 +143,16 @@ extra_reference_globs: [lib/generators/**/*.rb]
 - Engines mounted from gems, and routes added by gems beyond `devise_for` and `use_doorkeeper`. Use `--routes-json`
   if this matters.
 
-## Tests
+## Development
 
 ```bash
-cd script/dead_code && for f in test/*_test.rb; do ruby -Itest "$f"; done
+bundle install
+bundle exec rake          # tests and RuboCop
+bundle exec exe/deadspace test/fixtures/app
 ```
+
+`test/fixtures/app` is a small fake Rails app with known dead and live code; the tests assert on its report.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

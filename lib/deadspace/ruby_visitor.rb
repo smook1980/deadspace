@@ -205,6 +205,7 @@ module Deadspace
 
     ANONYMOUS_NAMESPACES = { %i[Struct new] => :class, %i[Class new] => :class, %i[Data define] => :class,
                              %i[Module new] => :module }.freeze
+    private_constant :ANONYMOUS_NAMESPACES
 
     def anonymous_namespace_kind(call)
       return unless call.is_a?(Prism::CallNode) && call.receiver.is_a?(Prism::ConstantReadNode)
@@ -392,7 +393,7 @@ module Deadspace
     def record_pattern(node, target)
       return unless node.is_a?(Prism::InterpolatedStringNode) || node.is_a?(Prism::InterpolatedSymbolNode)
 
-      static = node.parts.select { |p| p.is_a?(Prism::StringNode) }.map(&:unescaped)
+      static = node.parts.grep(Prism::StringNode).map(&:unescaped)
       return if static.empty? || static.sum(&:length) < 3
       return unless static.all? { |s| s.valid_encoding? && s.match?(PATTERN_STATIC_RE) }
 
