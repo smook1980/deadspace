@@ -1,0 +1,47 @@
+analyze
+  s_15aa2573172643::t_19148814207be0 19,25,57,64,73,77,79,82,91
+lib/deadspace.rb
+  s_15aa2573172643::t_fee6bbff0f9dd7 4,14-24,36
+lib/deadspace/analyzer.rb
+  s_15aa2573172643::t_aba95d82cbf7e9 3,62-63,171,196,311
+lib/deadspace/collector.rb
+  s_15aa2573172643::t_288c96535bdd82 3
+lib/deadspace/config.rb
+  s_15aa2573172643::t_ab5f09f6d6898f 3,5,70
+lib/deadspace/model.rb
+  s_15aa2573172643::t_4d2e69cb076eb8 3
+lib/deadspace/report.rb
+  s_15aa2573172643::t_5bfcb787c12cfd 5
+lib/deadspace/routes.rb
+  s_15aa2573172643::t_64fec95c13b3e2 3
+lib/deadspace/ruby_visitor.rb
+  s_15aa2573172643::t_ac1df647be5a5a 3,363
+lib/deadspace/test_map.rb
+  s_15aa2573172643::t_5041697687673d 3
+test/analyzer_test.rb
+  s_15aa2573172643::t_8ec4f40aec2186 14-16
+test/collector_test.rb
+  s_15aa2573172643::t_3ee8cd2644d8aa 8,26-27
+test/report_test.rb
+  s_15aa2573172643::t_e108e831801efb 10-12,14
+test/route_parser_test.rb
+  s_15aa2573172643::t_9730f2460f57b3 11
+test/test_helper.rb
+  s_15aa2573172643::t_d777c0e9ea2ad7 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fa3fa8a9f8401f2d12d5f3ec855714156b00dd8f",
+  "prompts": {},
+  "sessions": {
+    "s_15aa2573172643": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e658e264-395a-4a04-a8d0-75c6a1683760",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Shane Mook <shane.mook@gmail.com>"
+    }
+  }
+}
