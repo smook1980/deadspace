@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 # Ruby's own top-level constants, captured before libraries are loaded.
-DEAD_CODE_CORE_CONSTANTS = Object.constants.map(&:to_s).freeze
+DEADSPACE_CORE_CONSTANTS = Object.constants.map(&:to_s).freeze
 
 require "csv"
 require "json"
@@ -11,17 +11,17 @@ require "prism"
 require "active_support"
 require "active_support/core_ext/string/inflections"
 
-require_relative "dead_code/model"
-require_relative "dead_code/config"
-require_relative "dead_code/ruby_visitor"
-require_relative "dead_code/test_map"
-require_relative "dead_code/collector"
-require_relative "dead_code/routes"
-require_relative "dead_code/analyzer"
-require_relative "dead_code/report"
+require_relative "deadspace/model"
+require_relative "deadspace/config"
+require_relative "deadspace/ruby_visitor"
+require_relative "deadspace/test_map"
+require_relative "deadspace/collector"
+require_relative "deadspace/routes"
+require_relative "deadspace/analyzer"
+require_relative "deadspace/report"
 
-module DeadCode
-  CORE_CONSTANTS = DEAD_CODE_CORE_CONSTANTS.to_set.freeze
+module Deadspace
+  CORE_CONSTANTS = DEADSPACE_CORE_CONSTANTS.to_set.freeze
   # Namespaces Rails ships under gem names that don't match (actionpack => ActionController, ...).
   RAILS_NAMESPACES = %w[ActionCable ActionController ActionDispatch ActionMailbox ActionMailer ActionText
                         ActionView ActiveJob ActiveModel ActiveRecord ActiveStorage ActiveSupport Arel Rails
@@ -33,7 +33,7 @@ module DeadCode
   # (API vs Api) without loading the app's inflections.
   def normalize(name) = name.to_s.downcase.delete("_")
 
-  def core_constant?(name) = CORE_CONSTANTS.include?(name) && name != "DeadCode"
+  def core_constant?(name) = CORE_CONSTANTS.include?(name) && name != "Deadspace"
 
   # Top-level constants owned by gems (from Gemfile.lock). Code reopening them is a monkey patch:
   # always loaded, and its methods may be called by the gem.

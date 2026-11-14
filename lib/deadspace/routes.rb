@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module DeadCode
+module Deadspace
   # The set of [controller_path, action] pairs an app routes to.
   class RouteTable
     attr_reader :actions, :wildcard_controllers, :warnings, :source

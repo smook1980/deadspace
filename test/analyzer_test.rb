@@ -11,9 +11,9 @@ class AnalyzerTest < Minitest::Test
 
   def self.findings
     @findings ||= begin
-      config = DeadCode::Config.load(ROOT, nil)
-      routes = DeadCode::RouteParser.new(ROOT, DeadCode::Collector.new(ROOT, config).files("routes_globs")).parse
-      DeadCode.analyze(ROOT, config:, routes:).first
+      config = Deadspace::Config.load(ROOT, nil)
+      routes = Deadspace::RouteParser.new(ROOT, Deadspace::Collector.new(ROOT, config).files("routes_globs")).parse
+      Deadspace.analyze(ROOT, config:, routes:).first
     end
   end
 

@@ -16,13 +16,13 @@ rescue LoadError, StandardError => e
                                                                                      nil)} bundle install"
 end
 require "optparse"
-require_relative "lib/dead_code"
+require_relative "lib/deadspace"
 
 options = { color: $stdout.tty? && !ENV.key?("NO_COLOR"), routes: :static, only: nil, paths: [], ignore: [] }
 parser = OptionParser.new do |o|
   o.banner = "Usage: #{$PROGRAM_NAME} [options] [RAILS_ROOT (default: .)]"
   o.on("--csv PATH", "Also write findings to PATH and removable tests to PATH_tests.csv") { |v| options[:csv] = v }
-  o.on("--config PATH", "YAML overrides (default: RAILS_ROOT/.dead_code.yml if present)") { |v| options[:config] = v }
+  o.on("--config PATH", "YAML overrides (default: RAILS_ROOT/.deadspace.yml if present)") { |v| options[:config] = v }
   o.on("--routes-json PATH",
        "Use routes dumped from the booted app (dump_routes.rb) instead of parsing routes.rb") do |v|
     options[:routes] = v
@@ -54,14 +54,14 @@ unless File.exist?(File.join(root, "config/application.rb"))
 end
 
 started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-config = DeadCode::Config.load(root, options[:config])
+config = Deadspace::Config.load(root, options[:config])
 
 # Don't analyze this tool when it lives inside the app it is analyzing.
 tool_dir = File.expand_path(__dir__)
 ignore = options[:ignore].dup
 ignore << tool_dir.delete_prefix("#{root}/") if tool_dir.start_with?("#{root}/")
 options[:ignore].each do |path|
-  next if path.match?(DeadCode::Collector::GLOB_CHARS) || File.exist?(File.join(root, path))
+  next if path.match?(Deadspace::Collector::GLOB_CHARS) || File.exist?(File.join(root, path))
 
   warn "--ignore #{path}: no such file or directory under #{root}"
 end
@@ -70,16 +70,16 @@ routes =
   case options[:routes]
   when nil then nil
   when :static
-    files = DeadCode::Collector.new(root, config, ignore:).files("routes_globs")
+    files = Deadspace::Collector.new(root, config, ignore:).files("routes_globs")
     if files.empty?
       warn "No routes files found; skipping route analysis"
     else
-      DeadCode::RouteParser.new(root, files).parse
+      Deadspace::RouteParser.new(root, files).parse
     end
-  else DeadCode::RouteTable.from_json(options[:routes])
+  else Deadspace::RouteTable.from_json(options[:routes])
   end
 
-findings, index = DeadCode.analyze(root, config:, routes:, ignore:)
+findings, index = Deadspace.analyze(root, config:, routes:, ignore:)
 
 if options[:only]
   findings = findings.select do |f|
@@ -88,7 +88,7 @@ if options[:only]
 end
 findings = findings.select { |f| options[:paths].any? { |p| f.location.path.start_with?(p) } } if options[:paths].any?
 
-report = DeadCode::Report.new(findings, index:, routes:, root:,
+report = Deadspace::Report.new(findings, index:, routes:, root:,
                                         elapsed: Process.clock_gettime(Process::CLOCK_MONOTONIC) - started)
 unless options[:quiet]
   report.print_terminal($stdout, color: options[:color], verbose: options[:verbose], width: options[:width])

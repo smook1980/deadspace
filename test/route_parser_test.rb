@@ -8,7 +8,7 @@ class RouteParserTest < Minitest::Test
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p(File.join(dir, "config"))
       File.write(File.join(dir, "config/routes.rb"), "Rails.application.routes.draw do\n#{source}\nend\n")
-      table = DeadCode::RouteParser.new(dir, ["config/routes.rb"]).parse
+      table = Deadspace::RouteParser.new(dir, ["config/routes.rb"]).parse
       [table.actions.transform_values { |s| s.to_a.sort }, table]
     end
   end

@@ -7,11 +7,11 @@ class ReportTest < Minitest::Test
   ROOT = File.expand_path("fixtures/app", __dir__)
 
   def render(color: false, width: 50)
-    config = DeadCode::Config.load(ROOT, nil)
-    routes = DeadCode::RouteParser.new(ROOT, DeadCode::Collector.new(ROOT, config).files("routes_globs")).parse
-    findings, index = DeadCode.analyze(ROOT, config:, routes:)
+    config = Deadspace::Config.load(ROOT, nil)
+    routes = Deadspace::RouteParser.new(ROOT, Deadspace::Collector.new(ROOT, config).files("routes_globs")).parse
+    findings, index = Deadspace.analyze(ROOT, config:, routes:)
     io = StringIO.new
-    DeadCode::Report.new(findings, index:, routes:, root: "/app", elapsed: 0.1).print_terminal(io, color:, width:)
+    Deadspace::Report.new(findings, index:, routes:, root: "/app", elapsed: 0.1).print_terminal(io, color:, width:)
     io.string
   end
 

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-module DeadCode
+module Deadspace
   # Defaults target a conventional Rails 7 app. Override any key with a YAML file
-  # (`--config path`, or `.dead_code.yml` in the app root). List values replace the
+  # (`--config path`, or `.deadspace.yml` in the app root). List values replace the
   # defaults unless the key is prefixed with `extra_` (e.g. `extra_ignore_methods`), which appends.
   class Config
     DEFAULTS = {
@@ -67,7 +67,7 @@ module DeadCode
 
     def self.load(root, path)
       values = DEFAULTS.dup
-      path ||= File.join(root, ".dead_code.yml")
+      path ||= File.join(root, ".deadspace.yml")
       if File.exist?(path)
         overrides = YAML.safe_load_file(path) || {}
         overrides.each do |key, value|

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module DeadCode
+module Deadspace
   # Finds files per the config and feeds them to the Prism visitor or the text tokenizer.
   class Collector
     TEMPLATE_TOKEN_RE = /(?:::)?[A-Z]\w*(?:::[A-Z]\w*)*|[a-z_]\w*[?!]?/

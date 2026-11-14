@@ -2,7 +2,7 @@
 
 require "io/console"
 
-module DeadCode
+module Deadspace
   class Report
     SECTIONS = { module: "Modules", class: "Classes", controller_action: "Controller actions without a route",
                  method: "Methods" }.freeze

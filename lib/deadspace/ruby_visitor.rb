@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module DeadCode
+module Deadspace
   # Walks one Ruby file's Prism AST and records definitions (classes, modules, methods)
   # and every reference (calls, symbols, constants, strings) attributed to the scope it
   # appears in, so the analyzer can propagate liveness from entry points.
@@ -360,7 +360,7 @@ module DeadCode
       name_node = args.first
       return unless name_node.is_a?(Prism::SymbolNode)
 
-      refs.normalized_consts << DeadCode.normalize(name_node.unescaped.singularize)
+      refs.normalized_consts << Deadspace.normalize(name_node.unescaped.singularize)
     end
 
     def record_call_write(node)

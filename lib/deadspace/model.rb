@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module DeadCode
+module Deadspace
   MAIN = "(main)" # owner of top-level `def`s (rake files, scripts)
 
   Location = Struct.new(:path, :line) do

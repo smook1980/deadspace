@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module DeadCode
+module Deadspace
   # One RSpec example group / example, or Minitest test class / test, with its line range, what it
   # describes, and what its own code references (children excluded).
   class TestBlock

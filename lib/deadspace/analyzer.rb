@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module DeadCode
+module Deadspace
   # `targets` is what the finding covers (constant names, or the MethodDef); `tests` the removable test blocks.
   Finding = Struct.new(:confidence, :kind, :name, :location, :reason, :referenced_in_tests,
                        :definition_count, :targets, :tests, keyword_init: true)
@@ -59,8 +59,8 @@ module DeadCode
       @namespaces.each_key do |fqn|
         last = fqn.split("::").last
         @ns_by_last[last] << fqn
-        @ns_by_norm_last[DeadCode.normalize(last)] << fqn
-        @ns_by_norm_full[DeadCode.normalize(fqn)] << fqn
+        @ns_by_norm_last[Deadspace.normalize(last)] << fqn
+        @ns_by_norm_full[Deadspace.normalize(fqn)] << fqn
       end
       @methods_by_name = Hash.new { |h, k| h[k] = [] }
       @methods_by_owner = Hash.new { |h, k| h[k] = [] }
@@ -168,7 +168,7 @@ module DeadCode
 
     def library_namespace?(fqn)
       top = fqn.split("::").first
-      @gem_namespaces.include?(DeadCode.normalize(top)) || DeadCode.core_constant?(top)
+      @gem_namespaces.include?(Deadspace.normalize(top)) || Deadspace.core_constant?(top)
     end
 
     # ---------------------------------------------------------------- routes
@@ -193,7 +193,7 @@ module DeadCode
       @routed_names_cache = {}
     end
 
-    def controller_for(path) = @ns_by_norm_full[DeadCode.normalize("#{path.gsub("/", "::")}Controller")].first
+    def controller_for(path) = @ns_by_norm_full[Deadspace.normalize("#{path.gsub("/", "::")}Controller")].first
 
     def routes_unknown? = @routes.nil? || @routes.dynamic
 
@@ -308,7 +308,7 @@ module DeadCode
     end
 
     def symbol_conventions(symbol)
-      norm = DeadCode.normalize(symbol)
+      norm = Deadspace.normalize(symbol)
       CONVENTION_SYMBOL_SUFFIXES.each { |suffix| @ns_by_norm_last["#{norm}#{suffix}"].each { |fqn| live_ns!(fqn) } }
       @ns_by_norm_last[norm].each { |fqn| live_ns!(fqn) } if symbol.match?(CONVENTION_CLASS_SUFFIX_RE)
     end
