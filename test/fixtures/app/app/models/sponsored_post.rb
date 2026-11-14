@@ -1,0 +1,2 @@
+class SponsoredPost < Post
+end
